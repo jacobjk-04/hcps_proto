@@ -1,4 +1,4 @@
-// Global state for the SPA. Call render() after changing anything in here.
+// App state — render() reads from here on every page change.
 const AppState = {
   page: 'login',
   token: null,
@@ -12,8 +12,7 @@ const AppState = {
   statusPollId: null
 };
 
-// Wrapper around fetch(). Handles the auth header and JSON parsing in one place
-// so every API call doesn't need to repeat the same setup.
+// Small wrapper for API requests — adds the auth header and parses JSON.
 const API = {
   async request(method, path, body) {
     const opts = {
@@ -114,7 +113,6 @@ function closeModal() {
   document.getElementById('modal-box').innerHTML = '';
 }
 
-// Click outside the modal box to dismiss it.
 document.getElementById('modal-overlay').addEventListener('click', e => {
   if (e.target === document.getElementById('modal-overlay')) closeModal();
 });
@@ -162,8 +160,7 @@ function headerSyncPill() {
   </span>`;
 }
 
-// Shell layout — wraps the inner content with the header, sidebar, and downtime banner.
-// Every page renderer calls this and passes its own content string.
+// Wraps page content in the full layout: header, sidebar, downtime banner if active.
 function renderLayout(content) {
   const s = AppState.status || {};
   const online = s.primaryEMROnline !== false;
@@ -1538,7 +1535,7 @@ async function init() {
   await render();
 }
 
-// Expose handler functions globally so inline onclick attributes in the HTML can call them.
+// Expose to window — onclick handlers in HTML templates need these to be global.
 window.navigate          = navigate;
 window.handleLogin       = handleLogin;
 window.handleLogout      = handleLogout;

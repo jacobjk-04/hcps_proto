@@ -1,20 +1,10 @@
 # HCPS Architecture
 
-## Hybrid Continuity Planning System — Honours Thesis Prototype
-
 ---
 
-## Overview
+## System overview
 
-HCPS is a full-stack web prototype demonstrating the key concepts of clinical
-continuity planning during Electronic Medical Record (EMR) downtime. It
-simulates a dual-database architecture where a primary EMR database (DB1) and
-an HCPS backup database (DB2) coexist, with selective synchronisation, downtime
-failover, downtime documentation, and post-downtime reconciliation.
-
----
-
-## System Components
+Two SQLite databases, one Express backend, one vanilla JS frontend. The backend keeps an in-memory flag (`systemState.primaryEMROnline`) that determines whether patient reads go to DB1 or DB2.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -23,13 +13,13 @@ failover, downtime documentation, and post-downtime reconciliation.
 │  ─ Login  ─ Dashboard  ─ Patients  ─ Sync  ─ Downtime       │
 │  ─ Reconciliation Queue  ─ Audit Log  ─ Prototype Scope     │
 └──────────────────────────┬──────────────────────────────────┘
-                           │  HTTP/JSON REST API
+                           │  HTTP/JSON
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                  Express.js Backend (server.js)              │
 │                                                             │
 │  ┌────────────────┐   ┌───────────────────────────────────┐ │
-│  │  System State  │   │           REST Endpoints          │ │
+│  │  systemState   │   │           REST Endpoints          │ │
 │  │  primaryEMR    │   │  POST /api/login                  │ │
 │  │  Online: true  │   │  GET  /api/status                 │ │
 │  │  downtime      │   │  POST /api/sync                   │ │
@@ -37,10 +27,10 @@ failover, downtime documentation, and post-downtime reconciliation.
 │  └────────────────┘   │  POST /api/downtime/end           │ │
 │                       │  GET  /api/patients               │ │
 │  ┌────────────────┐   │  GET  /api/patients/:id           │ │
-│  │    Sessions    │   │  POST /api/hcps/notes             │ │
-│  │  Token-based   │   │  POST /api/hcps/medication-entry  │ │
-│  │  In-memory     │   │  GET  /api/reconciliation         │ │
-│  └────────────────┘   │  POST /api/reconciliation/:id/... │ │
+│  │    sessions    │   │  POST /api/hcps/notes             │ │
+│  │  in-memory     │   │  POST /api/hcps/medication-entry  │ │
+│  └────────────────┘   │  GET  /api/reconciliation         │ │
+│                       │  POST /api/reconciliation/:id/... │ │
 │                       │  GET  /api/audit-log              │ │
 │                       └───────────────────────────────────┘ │
 └──────────────┬────────────────────────────┬─────────────────┘
@@ -63,120 +53,93 @@ failover, downtime documentation, and post-downtime reconciliation.
 
 ---
 
-## Data Flow
+## Data flow
 
-### Normal Operation (primaryEMROnline = true)
-
-```
-Clinician → Browser → GET /api/patients → DB1 → Response
-```
-
-### Synchronisation (DB1 → DB2)
+### Normal operation
 
 ```
-Admin clicks Sync → POST /api/sync →
+Browser → GET /api/patients → DB1 → response
+```
+
+### Sync (DB1 → DB2)
+
+```
+Click sync → POST /api/sync →
   1. Read admitted patients from DB1
-  2. Read allergies, active meds, recent notes, recent labs
-  3. Delete old EMR-sourced records from DB2
-     (preserves HCPS downtime entries)
-  4. Insert fresh copies into DB2 with source='EMR'
+  2. Read allergies, active meds, notes (7d), labs (3d)
+  3. Delete old EMR-sourced rows from DB2 (keeps downtime entries)
+  4. Insert fresh copies with source='EMR'
   5. Record sync_metadata in DB2
   6. Log SYNC_COMPLETED in audit_log (both DBs)
 ```
 
-### Downtime Activation (primaryEMROnline = false)
+### Downtime activated
 
 ```
-Admin → POST /api/downtime/start →
+Click activate → POST /api/downtime/start →
   systemState.primaryEMROnline = false
-  All subsequent GET /api/patients reads DB2 instead of DB1
-  Log DOWNTIME_ACTIVATED in audit_log
+  All subsequent patient reads go to DB2
 ```
 
-### Downtime Documentation
+### Downtime documentation
 
 ```
-Clinician adds note/medication during downtime →
-  POST /api/hcps/notes or /api/hcps/medication-entry →
-    INSERT into DB2 with:
+Add note or medication during downtime →
+  POST /api/hcps/notes or /medication-entry →
+    INSERT into DB2:
       source = 'HCPS'
       reconciliation_status = 'pending'
       created_during_downtime = 1
-    Log DOWNTIME_NOTE_ADDED in audit_log (DB2)
 ```
 
-### EMR Restoration
+### EMR restored
 
 ```
-Admin → POST /api/downtime/end →
+Click restore → POST /api/downtime/end →
   systemState.primaryEMROnline = true
-  Log EMR_RESTORED in audit_log
   Reconciliation queue becomes available
 ```
 
 ### Reconciliation
 
 ```
-Admin reviews GET /api/reconciliation →
-  Queries DB2 for entries where:
-    created_during_downtime = 1
-    AND reconciliation_status IN ('pending', 'deferred')
-  Conflict detection:
-    Checks if patient in DB1 was updated after last sync_time
+Review queue → GET /api/reconciliation →
+  Queries DB2 where created_during_downtime=1
+    AND reconciliation_status IN ('pending','deferred')
+  Conflict check: was the patient's DB1 record updated after last sync?
 
 Confirm → POST /api/reconciliation/:id/confirm →
-  INSERT entry into DB1 (copy from DB2)
-  UPDATE DB2 entry: reconciliation_status = 'reconciled'
-  Log RECONCILIATION_CONFIRMED in audit_log (both DBs)
+  INSERT entry into DB1
+  UPDATE DB2: reconciliation_status = 'reconciled'
+  Log in audit_log (both DBs)
 
 Defer → POST /api/reconciliation/:id/defer →
-  UPDATE DB2 entry: reconciliation_status = 'deferred'
-  Log RECONCILIATION_DEFERRED in audit_log (both DBs)
+  UPDATE DB2: reconciliation_status = 'deferred'
+  Stays in queue
 ```
 
 ---
 
-## Selective Synchronisation — Minimum Continuity Dataset
+## What gets synced
 
-| Data Category | Window | Rationale |
+| Data | Window | Why |
 |---|---|---|
-| Admitted patients | All active | Required for patient identification |
-| Allergies | Complete record | Critical safety data — no window |
-| Active medications | Current orders | Required for safe medication administration |
-| Clinical notes | Last 7 days | Relevant clinical history window |
-| Lab results | Last 3 days | Recent pathology for clinical decisions |
-| Discharged patients | Not synced | Not required for downtime operations |
-| Historical notes >7d | Not synced | Reduces sync volume; within downtime window |
-| Administrative/billing | Not synced | Not required for clinical continuity |
+| Admitted patients | All | Need patient list during downtime |
+| Allergies | All | Safety-critical — can't miss these |
+| Active medications | Current only | What clinicians actually need |
+| Clinical notes | Last 7 days | Recent history is enough for a short outage |
+| Lab results | Last 3 days | Same reasoning |
+| Discharged patients | Not synced | Not needed during an outage |
+| Notes older than 7d | Not synced | Reduces DB2 size; acceptable for downtime window |
+| Billing / admin records | Not synced | Not clinically relevant |
 
 ---
 
-## Technology Stack
+## Stack
 
-| Layer | Technology | Notes |
-|---|---|---|
-| Frontend | HTML5, CSS3, Vanilla JS | Single-page app, no framework |
-| Backend | Node.js 18+, Express 4 | REST API |
-| Database | SQLite (better-sqlite3) | Two separate .db files |
-| Auth | Token-based (in-memory) | Prototype only |
-| Styling | Custom CSS with variables | Healthcare-themed |
-
----
-
-## Prototype Scope Boundary
-
-This prototype demonstrates:
-- Dual-database architecture (DB1 + DB2)
-- Selective synchronisation
-- Downtime failover and documentation
-- Reconciliation with conflict detection
-- Audit logging
-
-This prototype does NOT implement:
-- Real EMR integration (no FHIR/HL7)
-- Encryption at rest or in transit
-- Role-based access control
-- Patient privacy controls
-- Clinical validation
-- Production-grade error handling
-- Automated synchronisation scheduling
+| Layer | Tech |
+|---|---|
+| Frontend | HTML, CSS, Vanilla JS (no framework) |
+| Backend | Node.js, Express 4 |
+| Database | SQLite via better-sqlite3 |
+| Auth | Token-based, in-memory (prototype only) |

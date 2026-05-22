@@ -71,7 +71,7 @@ function auditBoth(user, action, patientId, details) {
   auditLog(DB2, user, action, patientId, details);
 }
 
-// Single-user login. Returns a token the frontend stores in localStorage.
+// Single-user login for the prototype.
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body || {};
 
@@ -93,7 +93,6 @@ app.post('/api/login', (req, res) => {
   res.json({ success: true, token, user: sessions[token].user });
 });
 
-// Delete the session token.
 app.post('/api/logout', requireAuth, (req, res) => {
   const token = req.headers.authorization.slice(7);
   auditBoth(req.user.displayName, 'USER_LOGOUT', null, `User '${req.user.username}' logged out`);

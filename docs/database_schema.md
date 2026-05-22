@@ -1,181 +1,156 @@
 # HCPS Database Schema
 
-## Hybrid Continuity Planning System — Honours Thesis Prototype
+Two SQLite files. DB1 is the simulated primary EMR. DB2 is the HCPS backup — same tables, plus a few extra columns on medications and clinical_notes to support reconciliation.
 
----
-
-## Overview
-
-The system uses two separate SQLite databases to simulate the
-dual-database architecture of a clinical continuity system.
-
-| Database | File | Purpose |
+| Database | File | Role |
 |---|---|---|
-| DB1 | `db/primary_emr.db` | Simulated primary EMR — source of truth during normal operation |
-| DB2 | `db/hcps_backup.db` | HCPS backup database — minimum continuity dataset + downtime entries |
+| DB1 | `db/primary_emr.db` | Primary EMR — source of truth during normal operation |
+| DB2 | `db/hcps_backup.db` | Backup — read source during downtime, stores downtime entries |
 
 ---
 
 ## DB1: primary_emr.db
 
 ### `patients`
-| Column | Type | Description |
+| Column | Type | Notes |
 |---|---|---|
-| id | INTEGER PK | Auto-increment patient ID |
-| mrn | TEXT UNIQUE | Medical Record Number (e.g. MRN-001) |
-| first_name | TEXT | Patient first name |
-| last_name | TEXT | Patient last name |
-| dob | TEXT | Date of birth (YYYY-MM-DD) |
-| gender | TEXT | Male / Female / Other |
-| ward | TEXT | Hospital ward |
-| bed | TEXT | Bed number |
-| admission_date | TEXT | Admission date |
-| discharge_date | TEXT | Discharge date (null if admitted) |
-| status | TEXT | admitted \| discharged |
-| diagnosis | TEXT | Primary diagnosis |
-| updated_at | TEXT | Last modification timestamp |
+| id | INTEGER PK | Auto-increment |
+| mrn | TEXT UNIQUE | e.g. MRN-001 |
+| first_name | TEXT | |
+| last_name | TEXT | |
+| dob | TEXT | YYYY-MM-DD |
+| gender | TEXT | |
+| ward | TEXT | |
+| bed | TEXT | |
+| admission_date | TEXT | |
+| discharge_date | TEXT | Null if still admitted |
+| status | TEXT | admitted / discharged |
+| diagnosis | TEXT | |
+| updated_at | TEXT | Last modified timestamp |
 
 ### `medications`
-| Column | Type | Description |
+| Column | Type | Notes |
 |---|---|---|
-| id | INTEGER PK | Auto-increment |
-| patient_id | INTEGER FK | References patients.id |
-| name | TEXT | Medication name |
-| dosage | TEXT | Dose (e.g. "500mg") |
-| frequency | TEXT | Frequency (e.g. "Twice daily") |
-| route | TEXT | Route (Oral, IV, SC, etc.) |
-| prescriber | TEXT | Prescribing clinician |
-| start_date | TEXT | Start date |
-| end_date | TEXT | End date (null if ongoing) |
-| status | TEXT | active \| ceased \| on-hold |
+| id | INTEGER PK | |
+| patient_id | INTEGER FK | → patients.id |
+| name | TEXT | |
+| dosage | TEXT | e.g. "500mg" |
+| frequency | TEXT | e.g. "Twice daily" |
+| route | TEXT | Oral, IV, SC, etc. |
+| prescriber | TEXT | |
+| start_date | TEXT | |
+| end_date | TEXT | Null if ongoing |
+| status | TEXT | active / ceased / on-hold |
 | source | TEXT | EMR (default) |
-| updated_at | TEXT | Last modification timestamp |
+| updated_at | TEXT | |
 
 ### `allergies`
-| Column | Type | Description |
+| Column | Type | Notes |
 |---|---|---|
-| id | INTEGER PK | Auto-increment |
-| patient_id | INTEGER FK | References patients.id |
-| allergen | TEXT | Allergen name |
-| reaction | TEXT | Reaction description |
-| severity | TEXT | Mild \| Moderate \| Severe |
-| updated_at | TEXT | Last modification timestamp |
+| id | INTEGER PK | |
+| patient_id | INTEGER FK | |
+| allergen | TEXT | |
+| reaction | TEXT | |
+| severity | TEXT | Mild / Moderate / Severe |
+| updated_at | TEXT | |
 
 ### `clinical_notes`
-| Column | Type | Description |
+| Column | Type | Notes |
 |---|---|---|
-| id | INTEGER PK | Auto-increment |
-| patient_id | INTEGER FK | References patients.id |
-| note_type | TEXT | Note category (Admission Note, etc.) |
-| note_text | TEXT | Full note body |
-| author | TEXT | Clinician who wrote the note |
-| created_at | TEXT | Creation timestamp |
-| updated_at | TEXT | Last modification timestamp |
+| id | INTEGER PK | |
+| patient_id | INTEGER FK | |
+| note_type | TEXT | e.g. Admission Note, Nursing Note |
+| note_text | TEXT | |
+| author | TEXT | |
+| created_at | TEXT | |
+| updated_at | TEXT | |
 | source | TEXT | EMR (default) |
 
 ### `lab_results`
-| Column | Type | Description |
+| Column | Type | Notes |
 |---|---|---|
-| id | INTEGER PK | Auto-increment |
-| patient_id | INTEGER FK | References patients.id |
-| test_name | TEXT | Test name (e.g. "HbA1c") |
-| value | TEXT | Result value |
-| unit | TEXT | Unit of measure |
-| reference_range | TEXT | Normal reference range |
-| status | TEXT | final \| preliminary \| corrected |
-| collected_at | TEXT | Collection timestamp |
-| updated_at | TEXT | Last modification timestamp |
+| id | INTEGER PK | |
+| patient_id | INTEGER FK | |
+| test_name | TEXT | e.g. "HbA1c" |
+| value | TEXT | |
+| unit | TEXT | |
+| reference_range | TEXT | |
+| status | TEXT | final / preliminary / corrected |
+| collected_at | TEXT | |
+| updated_at | TEXT | |
 
 ### `audit_log`
-| Column | Type | Description |
+| Column | Type | Notes |
 |---|---|---|
-| id | INTEGER PK | Auto-increment |
-| timestamp | TEXT | Event timestamp |
-| user | TEXT | User who performed the action |
-| action | TEXT | Action type (see below) |
-| patient_id | INTEGER | Related patient ID (nullable) |
-| details | TEXT | Human-readable description |
+| id | INTEGER PK | |
+| timestamp | TEXT | |
+| user | TEXT | |
+| action | TEXT | See action types below |
+| patient_id | INTEGER | Nullable |
+| details | TEXT | |
 
 ---
 
 ## DB2: hcps_backup.db
 
-Tables `patients`, `allergies`, and `lab_results` share the same schema as DB1
-(using explicit IDs matching DB1's primary keys).
+Same schema as DB1, except medications and clinical_notes have three extra columns:
 
-Tables `medications` and `clinical_notes` have three additional columns:
-
-### Additional columns on `medications` and `clinical_notes`
-
-| Column | Type | Description |
+| Column | Type | Values |
 |---|---|---|
-| source | TEXT | `'EMR'` = synced from DB1 \| `'HCPS'` = added during downtime |
-| reconciliation_status | TEXT | `'n/a'` \| `'pending'` \| `'deferred'` \| `'reconciled'` |
-| created_during_downtime | INTEGER | `0` = synced record \| `1` = downtime entry |
+| source | TEXT | `'EMR'` = synced from DB1 / `'HCPS'` = added during downtime |
+| reconciliation_status | TEXT | `'n/a'` / `'pending'` / `'deferred'` / `'reconciled'` |
+| created_during_downtime | INTEGER | 0 or 1 |
 
-### `sync_metadata` (DB2 only)
-| Column | Type | Description |
+The sync only deletes rows where `source = 'EMR'` before re-inserting. This is what stops a sync from wiping out downtime entries.
+
+DB2 also has a `sync_metadata` table that DB1 doesn't:
+
+### `sync_metadata`
+| Column | Type | Notes |
 |---|---|---|
-| id | INTEGER PK | Auto-increment |
-| sync_time | TEXT | Timestamp of sync event |
-| records_synced | INTEGER | Total records copied in this sync |
-| sync_status | TEXT | `success` \| `failed` |
-| sync_type | TEXT | `manual` \| `scheduled` |
-| details | TEXT | Human-readable sync summary |
+| id | INTEGER PK | |
+| sync_time | TEXT | |
+| records_synced | INTEGER | |
+| sync_status | TEXT | success / failed |
+| sync_type | TEXT | manual |
+| details | TEXT | |
 
 ---
 
-## Audit Log Action Types
+## Audit log action types
 
-| Action | Logged In | Description |
-|---|---|---|
-| USER_LOGIN | Both DBs | User authenticated |
-| USER_LOGOUT | Both DBs | User logged out |
-| SYNC_STARTED | Both DBs | Manual sync initiated |
-| SYNC_COMPLETED | Both DBs | Sync completed successfully |
-| SYNC_FAILED | Both DBs | Sync failed with error |
-| DOWNTIME_ACTIVATED | Both DBs | Primary EMR marked offline |
-| EMR_RESTORED | Both DBs | Primary EMR restored online |
-| PATIENT_LIST_VIEWED_DOWNTIME | DB2 only | Patient list accessed during downtime |
-| PATIENT_RECORD_VIEWED_DOWNTIME | DB2 only | Individual patient record viewed during downtime |
-| DOWNTIME_NOTE_ADDED | DB2 only | Clinical note added during downtime |
-| DOWNTIME_MEDICATION_ADDED | DB2 only | Medication entry added during downtime |
-| RECONCILIATION_CONFIRMED | Both DBs | Downtime entry confirmed and copied to DB1 |
-| RECONCILIATION_DEFERRED | Both DBs | Downtime entry deferred for later review |
-
----
-
-## Seed Data Summary (DB1)
-
-| Entity | Count | Notes |
-|---|---|---|
-| Patients | 8 | All admitted, various wards |
-| Medications | 33 | Active medications, various routes |
-| Allergies | 8 | Various allergens and severities |
-| Clinical Notes | 16 | 2 notes per patient |
-| Lab Results | 31 | 3–6 results per patient |
+| Action | Where logged |
+|---|---|
+| USER_LOGIN | Both DBs |
+| USER_LOGOUT | Both DBs |
+| SYNC_STARTED | Both DBs |
+| SYNC_COMPLETED | Both DBs |
+| SYNC_FAILED | Both DBs |
+| DOWNTIME_ACTIVATED | Both DBs |
+| EMR_RESTORED | Both DBs |
+| PATIENT_LIST_VIEWED_DOWNTIME | DB2 only |
+| PATIENT_RECORD_VIEWED_DOWNTIME | DB2 only |
+| DOWNTIME_NOTE_ADDED | DB2 only |
+| DOWNTIME_MEDICATION_ADDED | DB2 only |
+| RECONCILIATION_CONFIRMED | Both DBs |
+| RECONCILIATION_DEFERRED | Both DBs |
 
 ---
 
-## Key Design Decisions
+## Seed data (DB1)
 
-1. **DB2 shares table names with DB1**: Simplifies the sync and query logic.
-   The application state (`systemState.primaryEMROnline`) determines which
-   database to read from at query time.
+| Entity | Count |
+|---|---|
+| Patients | 8 |
+| Medications | 33 |
+| Allergies | 8 |
+| Clinical notes | 16 |
+| Lab results | 31 |
 
-2. **Explicit IDs for synced records**: When copying from DB1 to DB2,
-   the original DB1 ID is preserved to enable deduplication on re-sync
-   (`INSERT OR REPLACE` / `INSERT OR IGNORE`).
+---
 
-3. **HCPS downtime entries get auto-generated IDs**: When a clinician adds
-   a note or medication during downtime, no explicit ID is provided,
-   so SQLite's AUTOINCREMENT assigns the next available ID.
+## Design notes
 
-4. **Source column**: `source = 'EMR'` marks records copied from DB1.
-   `source = 'HCPS'` marks records created during downtime.
-   The sync process only deletes `source = 'EMR'` records, protecting
-   HCPS downtime entries from being overwritten.
+**IDs are shared between DB1 and DB2.** When syncing, DB1's original IDs are written into DB2 (`INSERT OR REPLACE`). This makes deduplication straightforward on re-sync. The trade-off is that in a real multi-system deployment you'd need UUIDs to avoid collisions — here it's fine because it's a single local prototype.
 
-5. **Prototype limitation — ID management**: In a production system,
-   UUIDs would be used to prevent potential ID collisions between DB1
-   and DB2 after multiple sync cycles.
+**Downtime entries use auto-generated IDs.** When a clinician adds a note or medication during downtime, no ID is specified, so SQLite assigns the next available AUTOINCREMENT value. These IDs don't need to match anything in DB1.
