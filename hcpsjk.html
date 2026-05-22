@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HCPS — Hybrid Continuity Planning System</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh;}
+
+/* HEADER */
+#header{height:60px;background:#1e3a8a;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:fixed;top:0;left:0;right:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,0.3);}
+#header.hcps{background:#78350f;}
+.hdr-left{display:flex;align-items:center;gap:14px;}
+.hdr-logo{color:#fff;font-size:17px;font-weight:700;letter-spacing:-0.3px;}
+.hdr-logo span{font-weight:300;opacity:0.7;}
+.hdr-badge{background:#dc2626;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:0.5px;}
+.hdr-badge.hcps-badge{background:#d97706;}
+.hdr-right{display:flex;align-items:center;gap:16px;}
+.hdr-user{color:#bfdbfe;font-size:13px;}
+.hdr-time{color:#93c5fd;font-size:12px;font-family:monospace;}
+.btn-hdr{background:transparent;border:1px solid rgba(255,255,255,0.3);color:#bfdbfe;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;}
+.btn-hdr:hover{background:rgba(255,255,255,0.1);}
+
+/* HCPS ALERT BANNER */
+#hcps-banner{display:none;background:#fef3c7;border-bottom:2px solid #f59e0b;padding:10px 24px 10px 240px;align-items:center;gap:12px;position:fixed;top:60px;left:0;right:0;z-index:150;}
+#hcps-banner.show{display:flex;}
+.banner-dot{width:10px;height:10px;background:#dc2626;border-radius:50%;animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.2;}}
+.banner-text{font-size:13px;color:#78350f;font-weight:600;}
+.banner-sub{font-size:12px;color:#92400e;margin-left:4px;font-weight:400;}
+.banner-timer{margin-left:auto;background:#92400e;color:#fef3c7;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;font-family:monospace;}
+.btn-restore{margin-left:12px;background:#16a34a;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;}
+.btn-restore:hover{background:#15803d;}
+
+/* SIDEBAR */
+#sidebar{width:220px;min-height:calc(100vh - 60px);background:#fff;border-right:1px solid #e2e8f0;position:fixed;top:60px;left:0;padding:12px 0;z-index:100;transition:top 0.2s;}
+#sidebar.with-banner{top:100px;}
+.nav-section{padding:14px 16px 6px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;color:#475569;font-size:13.5px;cursor:pointer;border-left:3px solid transparent;transition:all 0.15s;}
+.nav-item:hover{background:#f8fafc;color:#1e40af;}
+.nav-item.active{background:#eff6ff;color:#1e40af;font-weight:600;border-left-color:#1e40af;}
+.nav-item.active.hcps-nav{background:#fffbeb;color:#d97706;border-left-color:#d97706;}
+.nav-icon{width:18px;height:18px;flex-shrink:0;}
+.nav-divider{border:none;border-top:1px solid #f1f5f9;margin:8px 0;}
+.mode-pill{margin:12px 16px 0;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;}
+.mode-pill.normal{background:#dcfce7;color:#166534;}
+.mode-pill.hcps{background:#fef3c7;color:#92400e;animation:pulse-amber 2s infinite;}
+@keyframes pulse-amber{0%,100%{opacity:1;}50%{opacity:0.7;}}
+
+/* MAIN CONTENT */
+#main{margin-left:220px;margin-top:60px;padding:24px;min-height:calc(100vh - 60px);}
+#main.with-banner{margin-top:100px;}
+
+/* LOGIN */
+#page-login{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px);background:linear-gradient(135deg,#0f2462 0%,#1e3a8a 50%,#1e40af 100%);}
+.login-card{background:#fff;border-radius:16px;padding:48px 40px;width:400px;box-shadow:0 25px 50px rgba(0,0,0,0.25);}
+.login-brand{text-align:center;margin-bottom:32px;}
+.login-icon{width:68px;height:68px;background:#1e3a8a;border-radius:16px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;}
+.login-icon svg{width:36px;height:36px;}
+.login-title{font-size:22px;font-weight:800;color:#0f172a;}
+.login-sub{font-size:13px;color:#64748b;margin-top:4px;line-height:1.5;}
+.form-label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px;}
+.form-input{width:100%;padding:10px 14px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;outline:none;transition:border 0.2s,box-shadow 0.2s;margin-bottom:14px;}
+.form-input:focus{border-color:#1e40af;box-shadow:0 0 0 3px rgba(30,64,175,0.12);}
+.btn-login{width:100%;background:#1e3a8a;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;transition:background 0.2s;}
+.btn-login:hover{background:#1e40af;}
+.login-err{color:#dc2626;font-size:13px;margin-top:8px;display:none;text-align:center;}
+.login-hint{text-align:center;color:#94a3b8;font-size:12px;margin-top:16px;background:#f8fafc;padding:8px;border-radius:6px;}
+
+/* PAGE HEADERS */
+.pg-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+.pg-title{font-size:20px;font-weight:800;color:#0f172a;}
+.pg-sub{font-size:13px;color:#64748b;margin-top:2px;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+.stat-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;}
+.stat-lbl{font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;}
+.stat-val{font-size:28px;font-weight:800;color:#0f172a;margin-top:4px;}
+.stat-sub{font-size:12px;color:#94a3b8;margin-top:2px;}
+
+/* DOWNTIME SIM BAR */
+.sim-bar{background:#fff5f5;border:1.5px solid #fecaca;border-radius:12px;padding:14px 18px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.sim-bar.hcps-bar{background:#fffbeb;border-color:#fcd34d;}
+.sim-bar-text p{font-size:13px;color:#7f1d1d;line-height:1.5;}
+.sim-bar-text strong{font-weight:700;}
+.sim-bar-text.hcps-text p{color:#78350f;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;}
+.btn svg{width:15px;height:15px;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-blue{background:#1e40af;color:#fff;}
+.btn-blue:hover{background:#1d4ed8;}
+.btn-red{background:#dc2626;color:#fff;}
+.btn-red:hover{background:#b91c1c;}
+.btn-amber{background:#d97706;color:#fff;}
+.btn-amber:hover{background:#b45309;}
+.btn-green{background:#16a34a;color:#fff;}
+.btn-green:hover{background:#15803d;}
+.btn-outline{background:#fff;color:#374151;border:1.5px solid #d1d5db;}
+.btn-outline:hover{background:#f9fafb;}
+.btn-danger{background:#fff;color:#dc2626;border:1.5px solid #fca5a5;}
+.btn-danger:hover{background:#fef2f2;}
+
+/* CARD */
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;}
+.card-hdr{padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-size:14px;font-weight:700;color:#0f172a;}
+.card-body{padding:18px;}
+
+/* SEARCH */
+.search-row{display:flex;gap:10px;margin-bottom:16px;}
+.search-input{flex:1;padding:9px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;}
+.search-input:focus{border-color:#1e40af;}
+
+/* PATIENT TABLE */
+.pt-table{width:100%;border-collapse:collapse;}
+.pt-table th{text-align:left;padding:10px 14px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2px solid #f1f5f9;background:#fafafa;}
+.pt-table td{padding:13px 14px;border-bottom:1px solid #f8fafc;font-size:13.5px;color:#374151;vertical-align:middle;}
+.pt-table tr:hover td{background:#f8fafc;cursor:pointer;}
+.pt-table tr:last-child td{border-bottom:none;}
+.pt-name{font-weight:700;color:#0f172a;}
+.pt-mrn{font-size:11px;color:#94a3b8;margin-top:1px;}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.02em;}
+.bdg-green{background:#dcfce7;color:#166534;}
+.bdg-red{background:#fee2e2;color:#991b1b;}
+.bdg-amber{background:#fef3c7;color:#92400e;}
+.bdg-blue{background:#dbeafe;color:#1e40af;}
+.bdg-gray{background:#f1f5f9;color:#475569;}
+.bdg-purple{background:#f3e8ff;color:#7c3aed;}
+
+/* PATIENT DETAIL */
+.back-link{display:inline-flex;align-items:center;gap:6px;color:#64748b;font-size:13px;cursor:pointer;margin-bottom:16px;padding:4px 0;}
+.back-link:hover{color:#1e40af;}
+.pt-header{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:18px;display:flex;gap:18px;align-items:flex-start;}
+.pt-avatar{width:58px;height:58px;background:#1e3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:21px;font-weight:800;flex-shrink:0;}
+.pt-avatar.hcps-av{background:#78350f;}
+.pt-info h2{font-size:20px;font-weight:800;color:#0f172a;}
+.pt-diagnosis{font-size:13px;color:#64748b;margin-top:3px;}
+.pt-meta{display:flex;flex-wrap:wrap;gap:20px;margin-top:10px;}
+.meta-item label{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;display:block;font-weight:700;}
+.meta-item span{font-size:13px;color:#374151;font-weight:500;}
+
+/* TABS */
+.tabs{display:flex;gap:0;border-bottom:2px solid #e2e8f0;margin-bottom:18px;}
+.tab-btn{padding:10px 18px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;background:none;border-top:none;border-left:none;border-right:none;transition:all 0.15s;}
+.tab-btn:hover{color:#1e40af;}
+.tab-btn.active{color:#1e40af;border-bottom-color:#1e40af;}
+.tab-btn.active.hcps-tab{color:#d97706;border-bottom-color:#d97706;}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+/* ALLERGIES */
+.allergy-tag{display:inline-flex;align-items:center;background:#fee2e2;color:#991b1b;padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600;margin:4px;}
+
+/* MEDS */
+.med-row{display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #f8fafc;}
+.med-row:last-child{border-bottom:none;}
+.med-dot{width:8px;height:8px;background:#1e40af;border-radius:50%;margin-right:12px;flex-shrink:0;}
+.med-dot.hcps-dot{background:#d97706;}
+.med-name{font-weight:700;font-size:14px;color:#1e293b;}
+.med-detail{font-size:12px;color:#64748b;margin-top:2px;}
+
+/* LABS */
+.lab-row{display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #f8fafc;gap:12px;}
+.lab-row:last-child{border-bottom:none;}
+.lab-name{flex:1;font-size:14px;color:#374151;}
+.lab-result{font-weight:800;font-size:14px;}
+.lab-result.normal{color:#166534;}
+.lab-result.high{color:#dc2626;}
+.lab-result.elevated{color:#d97706;}
+.lab-range{font-size:11px;color:#94a3b8;margin-top:1px;}
+.lab-date{font-size:11px;color:#94a3b8;margin-left:auto;}
+
+/* NOTES */
+.note-card{padding:14px;border-radius:10px;margin-bottom:10px;border-left:3px solid #1e40af;background:#f8fafc;}
+.note-card.hcps-note{border-left-color:#d97706;background:#fffbeb;}
+.note-card.reconciled{border-left-color:#16a34a;background:#f0fdf4;}
+.note-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:6px;}
+.note-author{font-size:13px;font-weight:700;color:#374151;}
+.note-date{font-size:11px;color:#94a3b8;}
+.note-type-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;}
+.ntb-emr{background:#dbeafe;color:#1e40af;}
+.ntb-hcps{background:#fef3c7;color:#92400e;}
+.ntb-reconciled{background:#dcfce7;color:#166534;}
+.note-text{font-size:13.5px;color:#1e293b;line-height:1.6;}
+.note-form{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-top:12px;}
+.note-form-title{font-size:13px;font-weight:700;color:#374151;margin-bottom:10px;}
+.form-select{width:100%;padding:8px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13px;margin-bottom:10px;outline:none;}
+.form-textarea{width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13.5px;line-height:1.5;resize:vertical;min-height:80px;outline:none;font-family:inherit;}
+.form-textarea:focus,.form-select:focus{border-color:#1e40af;}
+.form-textarea.hcps-focus:focus{border-color:#d97706;}
+
+/* ADD PATIENT */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fg-full{grid-column:1/-1;}
+.sect-title{font-size:13px;font-weight:700;color:#374151;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #f1f5f9;}
+.tag-wrap{display:flex;flex-wrap:wrap;gap:6px;padding:8px;border:1.5px solid #d1d5db;border-radius:8px;min-height:42px;align-items:center;cursor:text;}
+.tag-wrap:focus-within{border-color:#1e40af;}
+.inp-tag{border:none;outline:none;font-size:13px;min-width:120px;padding:2px 4px;flex:1;}
+.tag-pill{background:#fee2e2;color:#991b1b;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px;}
+.tag-x{cursor:pointer;font-weight:900;opacity:0.6;}
+.tag-x:hover{opacity:1;}
+.med-list-wrap{border:1.5px solid #e2e8f0;border-radius:8px;overflow:hidden;}
+.med-list-item{display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;}
+.med-list-item:last-child{border-bottom:none;}
+.med-list-item button{margin-left:auto;background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px;font-weight:700;}
+.med-add-row{display:grid;grid-template-columns:2fr 1fr 2fr;gap:8px;margin-top:8px;}
+
+/* DOWNTIME TRANSITION */
+#page-downtime{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px);background:#0f172a;}
+.dt-card{text-align:center;max-width:480px;padding:48px 32px;}
+.dt-icon{width:88px;height:88px;background:#dc2626;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;animation:pulse-red 1s infinite;}
+@keyframes pulse-red{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0.4);}50%{box-shadow:0 0 0 16px rgba(220,38,38,0);}}
+.dt-title{color:#fff;font-size:26px;font-weight:800;margin-bottom:8px;}
+.dt-sub{color:#94a3b8;font-size:14px;line-height:1.7;margin-bottom:30px;}
+.dt-progress{background:#1e293b;border-radius:8px;height:6px;overflow:hidden;margin-bottom:24px;}
+.dt-bar{height:100%;background:linear-gradient(90deg,#d97706,#f59e0b);border-radius:8px;width:0;transition:width 0.1s linear;}
+.dt-status{color:#64748b;font-size:13px;}
+.dt-status span{color:#f59e0b;font-weight:700;}
+
+/* RECONCILIATION */
+.recon-header{background:linear-gradient(135deg,#065f46,#047857);border-radius:12px;padding:24px;margin-bottom:20px;color:#fff;}
+.recon-header h2{font-size:20px;font-weight:800;margin-bottom:4px;}
+.recon-header p{font-size:13px;opacity:0.8;}
+.recon-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px;}
+.recon-stat{background:rgba(255,255,255,0.15);border-radius:8px;padding:12px;}
+.recon-stat-val{font-size:24px;font-weight:800;}
+.recon-stat-lbl{font-size:11px;opacity:0.8;margin-top:2px;}
+.recon-table{width:100%;border-collapse:collapse;}
+.recon-table th{text-align:left;padding:10px 14px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;border-bottom:2px solid #f1f5f9;background:#fafafa;}
+.recon-table td{padding:12px 14px;border-bottom:1px solid #f8fafc;font-size:13px;vertical-align:top;}
+.recon-table tr:last-child td{border-bottom:none;}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:48px 24px;color:#94a3b8;}
+.empty-icon{font-size:40px;margin-bottom:12px;display:block;}
+.empty p{font-size:14px;}
+
+/* UTILITIES */
+.flex{display:flex;}.items-center{align-items:center;}.gap-8{gap:8px;}.gap-12{gap:12px;}.justify-between{justify-content:space-between;}
+.mt-12{margin-top:12px;}.mt-16{margin-top:16px;}.mt-20{margin-top:20px;}
+.text-sm{font-size:13px;}.text-muted{color:#64748b;}
+.hidden{display:none!important;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="hdr-left">
+    <div class="hdr-logo">HCPS <span>Hybrid Continuity Planning System</span></div>
+    <div id="hdr-badge" class="hdr-badge hidden">EMR OFFLINE</div>
+  </div>
+  <div class="hdr-right">
+    <div id="hdr-time" class="hdr-time"></div>
+    <div id="hdr-user" class="hdr-user hidden">Dr. Jacob Kunnappally</div>
+    <button id="hdr-logout" class="btn-hdr hidden" onclick="App.logout()">Logout</button>
+  </div>
+</div>
+
+<!-- HCPS BANNER -->
+<div id="hcps-banner">
+  <div class="banner-dot"></div>
+  <div>
+    <div class="banner-text">⚡ HCPS BACKUP SYSTEM ACTIVE <span class="banner-sub">— Primary EMR is unavailable. Patient data pre-synced and available.</span></div>
+  </div>
+  <div class="banner-timer" id="downtime-timer">00:00</div>
+  <button class="btn-restore" onclick="App.goRestore()">Restore Primary System →</button>
+</div>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="nav-section">Main</div>
+  <div class="nav-item active" id="nav-dashboard" onclick="App.navigate('dashboard')">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    Dashboard
+  </div>
+  <div class="nav-item" id="nav-patients" onclick="App.navigate('dashboard')">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Patients
+  </div>
+  <div class="nav-item" id="nav-add" onclick="App.navigate('add-patient')">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    Add Patient
+  </div>
+  <hr class="nav-divider">
+  <div class="nav-section">System</div>
+  <div class="nav-item" id="nav-recon" onclick="App.navigate('reconciliation')" style="display:none;">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Reconciliation
+  </div>
+  <div id="mode-pill" class="mode-pill normal">🟢 EMR Online — Normal Mode</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="main">
+  <!-- LOGIN -->
+  <div id="page-login">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="login-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="36" height="36"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <div class="login-title">HCPS Portal</div>
+        <div class="login-sub">Hybrid Continuity Planning System<br>Flinders University — Honours Thesis Prototype</div>
+      </div>
+      <label class="form-label">Username</label>
+      <input class="form-input" id="login-user" type="text" placeholder="Enter username" onkeydown="if(event.key==='Enter')App.doLogin()">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="login-pass" type="password" placeholder="Enter password" onkeydown="if(event.key==='Enter')App.doLogin()">
+      <button class="btn-login" onclick="App.doLogin()">Sign In</button>
+      <div class="login-err" id="login-err">Invalid username or password.</div>
+      <div class="login-hint">Demo credentials: <strong>admin</strong> / <strong>hcps2025</strong></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="page-dashboard" class="hidden">
+    <div class="pg-hdr">
+      <div>
+        <div class="pg-title" id="dash-title">Patient Dashboard</div>
+        <div class="pg-sub" id="dash-sub">Flinders Medical Centre — Ward Overview</div>
+      </div>
+      <button class="btn btn-blue" onclick="App.navigate('add-patient')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Patient
+      </button>
+    </div>
+
+    <div class="stats-row" id="stats-row"></div>
+
+    <div id="sim-bar-wrap"></div>
+
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title" id="pt-list-title">All Patients</div>
+        <div class="search-row" style="margin:0;">
+          <input class="search-input" id="search-input" placeholder="Search by name or MRN…" oninput="App.search(this.value)">
+        </div>
+      </div>
+      <div id="patient-table-wrap"></div>
+    </div>
+  </div>
+
+  <!-- PATIENT DETAIL -->
+  <div id="page-patient" class="hidden">
+    <div id="patient-detail-content"></div>
+  </div>
+
+  <!-- ADD PATIENT -->
+  <div id="page-add-patient" class="hidden">
+    <div class="back-link" onclick="App.navigate('dashboard')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to Dashboard
+    </div>
+    <div class="pg-hdr">
+      <div>
+        <div class="pg-title">Add New Patient</div>
+        <div class="pg-sub">Register a patient to the HCPS system</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="form-grid">
+          <div>
+            <label class="form-label">Full Name *</label>
+            <input class="form-input" id="ap-name" placeholder="e.g. John Smith">
+          </div>
+          <div>
+            <label class="form-label">Date of Birth *</label>
+            <input class="form-input" id="ap-dob" type="date">
+          </div>
+          <div>
+            <label class="form-label">Gender</label>
+            <select class="form-input" id="ap-gender">
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">MRN (auto-generated if blank)</label>
+            <input class="form-input" id="ap-mrn" placeholder="e.g. MRN-00000">
+          </div>
+          <div>
+            <label class="form-label">Ward *</label>
+            <input class="form-input" id="ap-ward" placeholder="e.g. Ward 3B">
+          </div>
+          <div>
+            <label class="form-label">Bed</label>
+            <input class="form-input" id="ap-bed" placeholder="e.g. Bed 4">
+          </div>
+          <div class="fg-full">
+            <label class="form-label">Primary Diagnosis *</label>
+            <input class="form-input" id="ap-diagnosis" placeholder="e.g. Type 2 Diabetes, Hypertension">
+          </div>
+        </div>
+
+        <div class="sect-title">Allergies</div>
+        <div class="tag-wrap" id="allergy-wrap" onclick="document.getElementById('allergy-inp').focus()">
+          <input class="inp-tag" id="allergy-inp" placeholder="Type allergy and press Enter…" onkeydown="App.addTag(event,'allergy')">
+        </div>
+        <div class="text-sm text-muted mt-12" style="color:#94a3b8;">Press Enter to add each allergy. Leave blank if none.</div>
+
+        <div class="sect-title">Medications</div>
+        <div id="med-list-add"></div>
+        <div class="med-add-row mt-12">
+          <input class="form-input" id="med-name-inp" placeholder="Medication name" style="margin:0;">
+          <input class="form-input" id="med-dose-inp" placeholder="Dose" style="margin:0;">
+          <input class="form-input" id="med-freq-inp" placeholder="Frequency" style="margin:0;">
+        </div>
+        <button class="btn btn-outline btn-sm mt-12" onclick="App.addMedToForm()">+ Add Medication</button>
+
+        <div class="flex gap-8 mt-20">
+          <button class="btn btn-blue" onclick="App.savePatient()">Save Patient</button>
+          <button class="btn btn-outline" onclick="App.navigate('dashboard')">Cancel</button>
+        </div>
+        <div id="ap-err" class="login-err" style="text-align:left;margin-top:8px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOWNTIME TRANSITION -->
+  <div id="page-downtime" class="hidden">
+    <div class="dt-card">
+      <div class="dt-icon">
+        <svg viewBox="0 0 24 24" fill="white" width="42" height="42"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13" stroke="white" stroke-width="2"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="white" stroke-width="2"/></svg>
+      </div>
+      <div class="dt-title">EMR System Unavailable</div>
+      <div class="dt-sub">The primary Electronic Medical Record system has gone offline.<br>Activating HCPS Backup System — pre-synced patient data is being loaded.</div>
+      <div class="dt-progress"><div class="dt-bar" id="dt-bar"></div></div>
+      <div class="dt-status" id="dt-status">Initialising HCPS backup database…</div>
+    </div>
+  </div>
+
+  <!-- RECONCILIATION -->
+  <div id="page-reconciliation" class="hidden">
+    <div class="back-link" onclick="App.navigate('dashboard')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to Dashboard
+    </div>
+    <div id="recon-content"></div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────
+// DEFAULT PATIENT DATA
+// ─────────────────────────────────────────────────────────
+const DEFAULT_PATIENTS = [
+  {
+    id:'P001',mrn:'MRN-45231',name:'Sarah Johnson',dob:'1979-08-15',gender:'Female',
+    ward:'Ward 3B',bed:'Bed 12',admissionDate:'2026-04-10',
+    diagnosis:'Type 2 Diabetes, Hypertension',
+    allergies:['Penicillin','Sulfa drugs'],
+    medications:[
+      {name:'Metformin',dose:'500mg',freq:'Twice daily',route:'Oral'},
+      {name:'Lisinopril',dose:'10mg',freq:'Once daily',route:'Oral'},
+      {name:'Aspirin',dose:'100mg',freq:'Once daily',route:'Oral'}
+    ],
+    labs:[
+      {test:'HbA1c',result:'7.2%',date:'2026-04-10',status:'elevated',range:'< 7.0%'},
+      {test:'Fasting Blood Glucose',result:'8.4 mmol/L',date:'2026-04-14',status:'high',range:'3.9–5.5 mmol/L'},
+      {test:'Blood Pressure',result:'138/88 mmHg',date:'2026-04-14',status:'elevated',range:'< 130/80 mmHg'},
+      {test:'eGFR',result:'72 mL/min',date:'2026-04-10',status:'normal',range:'> 60 mL/min'}
+    ],
+    notes:[
+      {id:'N001',date:'2026-04-14 09:30',author:'Dr. Patel',type:'Progress Note',text:'Patient stable. Blood glucose slightly elevated. Increase Metformin to 1000mg twice daily. Continue monitoring BP. Review in 48 hours.',source:'emr'},
+      {id:'N002',date:'2026-04-13 14:00',author:'Nurse Chen',type:'Nursing Note',text:'Patient reports mild headache. BP 142/90. Administered scheduled medications. Patient education provided regarding low-sodium diet.',source:'emr'}
+    ]
+  },
+  {
+    id:'P002',mrn:'MRN-38912',name:'Michael Chen',dob:'1963-03-22',gender:'Male',
+    ward:'Ward 4A — Cardiac',bed:'Bed 7',admissionDate:'2026-04-08',
+    diagnosis:'Heart Failure (EF 35%), Atrial Fibrillation',
+    allergies:['ACE Inhibitors','Contrast dye'],
+    medications:[
+      {name:'Furosemide',dose:'40mg',freq:'Once daily',route:'IV'},
+      {name:'Bisoprolol',dose:'5mg',freq:'Once daily',route:'Oral'},
+      {name:'Warfarin',dose:'4mg',freq:'Once daily',route:'Oral'},
+      {name:'Spironolactone',dose:'25mg',freq:'Once daily',route:'Oral'}
+    ],
+    labs:[
+      {test:'BNP',result:'820 pg/mL',date:'2026-04-14',status:'high',range:'< 100 pg/mL'},
+      {test:'INR',result:'2.4',date:'2026-04-14',status:'normal',range:'2.0–3.0 (therapeutic)'},
+      {test:'Creatinine',result:'118 μmol/L',date:'2026-04-14',status:'elevated',range:'62–106 μmol/L'},
+      {test:'Potassium',result:'3.8 mmol/L',date:'2026-04-14',status:'normal',range:'3.5–5.0 mmol/L'}
+    ],
+    notes:[
+      {id:'N003',date:'2026-04-14 08:00',author:'Dr. Williams',type:'Progress Note',text:'Patient reports improved dyspnoea overnight. Weight down 1.2 kg from yesterday. BNP still elevated but trending down. Continue current diuresis. Repeat echo scheduled for tomorrow.',source:'emr'}
+    ]
+  },
+  {
+    id:'P003',mrn:'MRN-52018',name:'Emma Williams',dob:'1992-11-05',gender:'Female',
+    ward:'Ward 2C — Respiratory',bed:'Bed 3',admissionDate:'2026-04-13',
+    diagnosis:'Acute Severe Asthma Exacerbation',
+    allergies:['Aspirin','NSAIDs','Beta-blockers'],
+    medications:[
+      {name:'Salbutamol',dose:'5mg',freq:'Every 4 hours via nebuliser',route:'Inhaled'},
+      {name:'Ipratropium',dose:'0.5mg',freq:'Every 6 hours via nebuliser',route:'Inhaled'},
+      {name:'Prednisolone',dose:'50mg',freq:'Once daily',route:'Oral'},
+      {name:'Magnesium Sulphate',dose:'2g',freq:'Once (given on admission)',route:'IV'}
+    ],
+    labs:[
+      {test:'SpO2',result:'95%',date:'2026-04-14',status:'normal',range:'> 94%'},
+      {test:'Peak Flow',result:'280 L/min',date:'2026-04-14',status:'elevated',range:'> 350 L/min (target)'},
+      {test:'ABG pH',result:'7.42',date:'2026-04-13',status:'normal',range:'7.35–7.45'},
+      {test:'pCO2',result:'38 mmHg',date:'2026-04-13',status:'normal',range:'35–45 mmHg'}
+    ],
+    notes:[
+      {id:'N004',date:'2026-04-14 07:45',author:'Dr. Hassan',type:'Progress Note',text:'Significant improvement since admission. Peak flow up from 180 to 280 L/min. Tolerating oral prednisolone well. Plan to step down nebulisers to PRN. May be for discharge tomorrow if peak flow > 350.',source:'emr'},
+      {id:'N005',date:'2026-04-13 22:00',author:'Nurse Davis',type:'Nursing Note',text:'Nebuliser given as scheduled. Patient settled. SpO2 maintained 95–97% on 2L nasal prongs.',source:'emr'}
+    ]
+  },
+  {
+    id:'P004',mrn:'MRN-29745',name:'Robert Davis',dob:'1955-06-30',gender:'Male',
+    ward:'Ward 2C — Respiratory',bed:'Bed 8',admissionDate:'2026-04-11',
+    diagnosis:'COPD Exacerbation, Community-Acquired Pneumonia',
+    allergies:['Erythromycin'],
+    medications:[
+      {name:'Amoxicillin-Clavulanate',dose:'875mg',freq:'Twice daily',route:'Oral'},
+      {name:'Doxycycline',dose:'100mg',freq:'Once daily',route:'Oral'},
+      {name:'Tiotropium',dose:'18mcg',freq:'Once daily',route:'Inhaled'},
+      {name:'Salbutamol',dose:'2.5mg',freq:'Every 4 hours PRN',route:'Inhaled'},
+      {name:'Prednisolone',dose:'30mg',freq:'Once daily (5-day course)',route:'Oral'}
+    ],
+    labs:[
+      {test:'WBC',result:'14.2 × 10⁹/L',date:'2026-04-14',status:'high',range:'4.0–11.0 × 10⁹/L'},
+      {test:'CRP',result:'88 mg/L',date:'2026-04-14',status:'high',range:'< 10 mg/L'},
+      {test:'SpO2',result:'91%',date:'2026-04-14',status:'elevated',range:'> 88% (COPD target)'},
+      {test:'Creatinine',result:'102 μmol/L',date:'2026-04-14',status:'normal',range:'62–106 μmol/L'}
+    ],
+    notes:[
+      {id:'N006',date:'2026-04-14 09:00',author:'Dr. Williams',type:'Progress Note',text:'Patient clinically improved from admission. CRP down from 142. Still requiring 2L O2. Continue antibiotics — day 3 of 5. Chest X-ray today shows partial resolution of right lower lobe consolidation.',source:'emr'}
+    ]
+  }
+];
+
+// ─────────────────────────────────────────────────────────
+// APP
+// ─────────────────────────────────────────────────────────
+const App = {
+  state: { page:'login', patientId:null, tab:'notes', mode:'normal', downtimeStart:null, loggedIn:false },
+  patients: [],
+  downtimeEntries: [],
+  formAllergies: [],
+  formMeds: [],
+  timerInterval: null,
+  clockInterval: null,
+
+  // ── INIT ──────────────────────────────────────────────
+  init() {
+    this.load();
+    this.render();
+    this.startClock();
+  },
+
+  load() {
+    const p = localStorage.getItem('hcps_pts');
+    this.patients = p ? JSON.parse(p) : JSON.parse(JSON.stringify(DEFAULT_PATIENTS));
+    const e = localStorage.getItem('hcps_entries');
+    this.downtimeEntries = e ? JSON.parse(e) : [];
+    const s = localStorage.getItem('hcps_st');
+    if (s) {
+      const saved = JSON.parse(s);
+      this.state.mode = saved.mode || 'normal';
+      this.state.downtimeStart = saved.downtimeStart || null;
+      this.state.loggedIn = saved.loggedIn || false;
+      if (this.state.loggedIn) this.state.page = 'dashboard';
+    }
+  },
+
+  save() {
+    localStorage.setItem('hcps_pts', JSON.stringify(this.patients));
+    localStorage.setItem('hcps_entries', JSON.stringify(this.downtimeEntries));
+    localStorage.setItem('hcps_st', JSON.stringify({
+      mode: this.state.mode,
+      downtimeStart: this.state.downtimeStart,
+      loggedIn: this.state.loggedIn
+    }));
+  },
+
+  startClock() {
+    const tick = () => {
+      const el = document.getElementById('hdr-time');
+      if (el) el.textContent = new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    };
+    tick();
+    this.clockInterval = setInterval(tick, 1000);
+  },
+
+  // ── NAVIGATION ────────────────────────────────────────
+  navigate(page, params = {}) {
+    this.state.page = page;
+    if (params.patientId !== undefined) this.state.patientId = params.patientId;
+    if (params.tab) this.state.tab = params.tab;
+    else if (page !== 'patient') this.state.tab = 'notes';
+    this.render();
+    window.scrollTo(0,0);
+  },
+
+  // ── RENDER ────────────────────────────────────────────
+  render() {
+    const { page, mode, loggedIn } = this.state;
+    const isHCPS = mode === 'hcps';
+
+    // Header
+    const hdr = document.getElementById('header');
+    const hdrBadge = document.getElementById('hdr-badge');
+    const hdrUser = document.getElementById('hdr-user');
+    const hdrLogout = document.getElementById('hdr-logout');
+    if (loggedIn) {
+      hdr.className = isHCPS ? 'hcps' : '';
+      hdrBadge.className = isHCPS ? 'hdr-badge hcps-badge' : 'hdr-badge hidden';
+      if (!isHCPS) hdrBadge.classList.add('hidden');
+      hdrBadge.textContent = '⚡ HCPS ACTIVE';
+      hdrUser.classList.remove('hidden');
+      hdrLogout.classList.remove('hidden');
+    } else {
+      hdr.className = '';
+      hdrBadge.className = 'hdr-badge hidden';
+      hdrUser.classList.add('hidden');
+      hdrLogout.classList.add('hidden');
+    }
+
+    // Banner + Sidebar
+    const banner = document.getElementById('hcps-banner');
+    const sidebar = document.getElementById('sidebar');
+    const main = document.getElementById('main');
+    const showChrome = loggedIn && page !== 'login' && page !== 'downtime';
+    sidebar.style.display = showChrome ? 'block' : 'none';
+
+    if (isHCPS && showChrome) {
+      banner.classList.add('show');
+      sidebar.classList.add('with-banner');
+      main.classList.add('with-banner');
+      this.startTimer();
+    } else {
+      banner.classList.remove('show');
+      sidebar.classList.remove('with-banner');
+      main.classList.remove('with-banner');
+      if (!isHCPS) this.stopTimer();
+    }
+
+    // Mode pill
+    const pill = document.getElementById('mode-pill');
+    const reconNav = document.getElementById('nav-recon');
+    if (isHCPS) {
+      pill.className = 'mode-pill hcps';
+      pill.textContent = '🔴 HCPS Mode — EMR Offline';
+      reconNav.style.display = 'flex';
+    } else {
+      pill.className = 'mode-pill normal';
+      pill.textContent = '🟢 EMR Online — Normal Mode';
+      reconNav.style.display = this.downtimeEntries.length > 0 ? 'flex' : 'none';
+    }
+
+    // Nav active state
+    ['dashboard','add'].forEach(k => {
+      const el = document.getElementById('nav-' + k);
+      if (el) el.className = 'nav-item' + (isHCPS ? ' hcps-nav' : '');
+    });
+    if (page === 'dashboard') document.getElementById('nav-dashboard').classList.add('active');
+    if (page === 'add-patient') document.getElementById('nav-add').classList.add('active');
+
+    // Pages
+    const pages = ['login','dashboard','patient','add-patient','downtime','reconciliation'];
+    pages.forEach(p => {
+      const el = document.getElementById('page-' + p);
+      if (el) el.classList.toggle('hidden', p !== page);
+    });
+
+    // Render page content
+    if (page === 'dashboard') this.renderDashboard();
+    if (page === 'patient') this.renderPatient();
+    if (page === 'add-patient') this.renderAddPatient();
+    if (page === 'reconciliation') this.renderReconciliation();
+  },
+
+  // ── DASHBOARD ────────────────────────────────────────
+  renderDashboard() {
+    const isHCPS = this.state.mode === 'hcps';
+    const query = (document.getElementById('search-input') || {}).value || '';
+    const pts = this.filterPatients(query);
+
+    // Title
+    document.getElementById('dash-title').textContent = isHCPS ? '⚡ HCPS Patient Dashboard' : 'Patient Dashboard';
+    document.getElementById('dash-sub').textContent = isHCPS
+      ? 'HCPS Backup Active — Data pre-synced as of downtime. You can continue working.'
+      : 'Flinders Medical Centre — Ward Overview';
+
+    // Stats
+    const hcpsNotes = this.patients.reduce((a,p) => a + p.notes.filter(n=>n.source==='hcps').length, 0);
+    document.getElementById('stats-row').innerHTML =
+      this.statCard(this.patients.length,'Total Patients','All wards') +
+      this.statCard(isHCPS ? '<span style="color:#d97706">OFFLINE</span>' : '<span style="color:#16a34a">ONLINE</span>','Primary EMR','System status') +
+      this.statCard(this.downtimeEntries.length,'Downtime Entries', isHCPS ? 'Recorded via HCPS' : 'Pending reconciliation') +
+      this.statCard(this.patients.reduce((a,p)=>a+p.notes.length,0),'Total Notes','All patients');
+
+    // Sim bar
+    document.getElementById('sim-bar-wrap').innerHTML = isHCPS
+      ? '<div class="sim-bar hcps-bar"><div class="sim-bar-text hcps-text"><p>⚡ <strong>HCPS is active.</strong> The primary EMR is offline. Patient data was pre-synced before the outage. You can view records and add notes — all entries will be reconciled when the EMR is restored.</p></div><button class="btn btn-green" onclick="App.goRestore()">Restore Primary System</button></div>'
+      : '<div class="sim-bar"><div class="sim-bar-text"><p>🔴 <strong>Simulate EMR Downtime</strong> — Use this to demonstrate the HCPS failover. The system will switch to HCPS backup mode, preserving all patient data.</p></div><button class="btn btn-red" onclick="App.simulateDowntime()">Simulate EMR Downtime</button></div>';
+
+    // Table
+    let rows = pts.length === 0
+      ? '<tr><td colspan="6"><div class="empty"><span class="empty-icon">🔍</span><p>No patients found.</p></div></td></tr>'
+      : pts.map(p => {
+          const age = this.calcAge(p.dob);
+          const initials = p.name.split(' ').map(w=>w[0]).join('').substring(0,2);
+          const hcpsNotes = p.notes.filter(n=>n.source==='hcps').length;
+          return '<tr onclick="App.navigate(\'patient\',{patientId:\''+p.id+'\'})">' +
+            '<td><div style="display:flex;align-items:center;gap:12px;">' +
+            '<div style="width:36px;height:36px;background:'+(isHCPS?'#78350f':'#1e3a8a')+';border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0;">'+initials+'</div>' +
+            '<div><div class="pt-name">'+p.name+'</div><div class="pt-mrn">'+p.mrn+'</div></div></div></td>' +
+            '<td>'+age+' yrs &nbsp;<span class="badge bdg-gray">'+p.gender+'</span></td>' +
+            '<td>'+p.ward+' · '+p.bed+'</td>' +
+            '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+p.diagnosis+'</td>' +
+            '<td>'+p.allergies.map(a=>'<span class="badge bdg-red">'+a+'</span>').join(' ')+'</td>' +
+            '<td>'+p.notes.length+' notes'+(hcpsNotes>0?' &nbsp;<span class="badge bdg-amber">'+hcpsNotes+' HCPS</span>':'')+'</td>' +
+          '</tr>';
+        }).join('');
+
+    document.getElementById('patient-table-wrap').innerHTML =
+      '<table class="pt-table">' +
+      '<thead><tr><th>Patient</th><th>Age / Gender</th><th>Ward / Bed</th><th>Diagnosis</th><th>Allergies</th><th>Notes</th></tr></thead>' +
+      '<tbody>'+rows+'</tbody></table>';
+  },
+
+  statCard(val,lbl,sub) {
+    return '<div class="stat-card"><div class="stat-lbl">'+lbl+'</div><div class="stat-val">'+val+'</div><div class="stat-sub">'+sub+'</div></div>';
+  },
+
+  filterPatients(q) {
+    if (!q) return this.patients;
+    const lq = q.toLowerCase();
+    return this.patients.filter(p => p.name.toLowerCase().includes(lq) || p.mrn.toLowerCase().includes(lq) || p.ward.toLowerCase().includes(lq));
+  },
+
+  search(q) { this.renderDashboard(); },
+
+  // ── PATIENT DETAIL ────────────────────────────────────
+  renderPatient() {
+    const p = this.patients.find(x => x.id === this.state.patientId);
+    if (!p) { this.navigate('dashboard'); return; }
+    const isHCPS = this.state.mode === 'hcps';
+    const tab = this.state.tab;
+    const initials = p.name.split(' ').map(w=>w[0]).join('').substring(0,2);
+
+    let html = '<div class="back-link" onclick="App.navigate(\'dashboard\')">'
+      + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>'
+      + 'Back to Patient List</div>';
+
+    // Header card
+    html += '<div class="pt-header">'
+      + '<div class="pt-avatar'+(isHCPS?' hcps-av':'')+'">'+initials+'</div>'
+      + '<div style="flex:1"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+      + '<h2 class="pt-info" style="font-size:20px;font-weight:800;color:#0f172a;">'+p.name+'</h2>'
+      + (isHCPS ? '<span class="badge bdg-amber">⚡ HCPS Record</span>' : '<span class="badge bdg-green">EMR Record</span>')
+      + '</div>'
+      + '<div class="pt-diagnosis">'+p.diagnosis+'</div>'
+      + '<div class="pt-meta">'
+      + this.metaItem('MRN',p.mrn)
+      + this.metaItem('DOB',this.fmtDate(p.dob)+' ('+this.calcAge(p.dob)+' yrs)')
+      + this.metaItem('Gender',p.gender)
+      + this.metaItem('Ward',p.ward)
+      + this.metaItem('Bed',p.bed)
+      + this.metaItem('Admitted',this.fmtDate(p.admissionDate))
+      + '</div></div></div>';
+
+    // Tabs
+    const tabs = [['notes','Clinical Notes'],['medications','Medications'],['labs','Lab Results'],['allergies','Allergies']];
+    html += '<div class="tabs">' + tabs.map(([k,label]) =>
+      '<button class="tab-btn'+(tab===k?' active'+(isHCPS?' hcps-tab':''):'')+'" onclick="App.switchTab(\''+k+'\')" data-tab="'+k+'">'+label
+      +(k==='notes'?' <span class="badge '+(isHCPS?'bdg-amber':'bdg-blue')+'" style="font-size:10px;">'+p.notes.length+'</span>':'')
+      +'</button>'
+    ).join('') + '</div>';
+
+    // Tab content
+    if (tab === 'allergies') {
+      html += '<div class="card"><div class="card-body">';
+      if (p.allergies.length === 0) {
+        html += '<div class="empty"><span class="empty-icon">✅</span><p>No known allergies recorded.</p></div>';
+      } else {
+        html += '<div style="margin-bottom:12px;"><span class="badge bdg-red" style="font-size:12px;margin-bottom:8px;">⚠️ ALLERGY ALERT</span></div>';
+        html += p.allergies.map(a => '<span class="allergy-tag">⚠ '+a+'</span>').join('');
+      }
+      html += '</div></div>';
+    }
+
+    if (tab === 'medications') {
+      html += '<div class="card"><div class="card-body">';
+      if (p.medications.length === 0) {
+        html += '<div class="empty"><span class="empty-icon">💊</span><p>No medications recorded.</p></div>';
+      } else {
+        html += p.medications.map(m =>
+          '<div class="med-row"><div class="med-dot'+(isHCPS?' hcps-dot':'')+'"></div><div style="flex:1"><div class="med-name">'+m.name+'</div><div class="med-detail">'+m.dose+' · '+m.freq+' · '+m.route+'</div></div><span class="badge bdg-blue">'+m.route+'</span></div>'
+        ).join('');
+      }
+      html += '</div></div>';
+    }
+
+    if (tab === 'labs') {
+      html += '<div class="card"><div class="card-body">';
+      if (p.labs.length === 0) {
+        html += '<div class="empty"><span class="empty-icon">🔬</span><p>No lab results recorded.</p></div>';
+      } else {
+        html += p.labs.map(l => {
+          const cls = l.status === 'normal' ? 'normal' : l.status === 'high' ? 'high' : 'elevated';
+          const arrow = l.status === 'high' ? ' ↑' : l.status === 'elevated' ? ' ↑' : '';
+          return '<div class="lab-row"><div class="lab-name"><div style="font-weight:600;font-size:14px;color:#1e293b;">'+l.test+'</div><div class="lab-range">Ref: '+l.range+'</div></div>'
+            + '<div class="lab-result '+cls+'">'+l.result+arrow+'</div>'
+            + '<span class="badge '+(l.status==='normal'?'bdg-green':l.status==='high'?'bdg-red':'bdg-amber')+'">'+l.status+'</span>'
+            + '<div class="lab-date">'+l.date+'</div></div>';
+        }).join('');
+      }
+      html += '</div></div>';
+    }
+
+    if (tab === 'notes') {
+      // Notes list
+      html += '<div class="card" style="margin-bottom:16px;"><div class="card-hdr"><div class="card-title">Clinical Notes</div></div><div class="card-body">';
+      if (p.notes.length === 0) {
+        html += '<div class="empty"><span class="empty-icon">📋</span><p>No notes recorded yet.</p></div>';
+      } else {
+        html += [...p.notes].reverse().map(n => {
+          const isHcpsNote = n.source === 'hcps';
+          const isRecon = n.source === 'reconciled';
+          const cls = isRecon ? 'note-card reconciled' : isHcpsNote ? 'note-card hcps-note' : 'note-card';
+          const badge = isRecon
+            ? '<span class="note-type-badge ntb-reconciled">✓ Reconciled</span>'
+            : isHcpsNote
+            ? '<span class="note-type-badge ntb-hcps">⚡ HCPS Downtime Entry</span>'
+            : '<span class="note-type-badge ntb-emr">EMR</span>';
+          return '<div class="'+cls+'"><div class="note-top"><div style="display:flex;align-items:center;gap:8px;"><span class="note-author">'+n.author+'</span>'+badge+'</div><div class="note-date">'+n.date+'</div></div><div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">'+n.type+'</div><div class="note-text">'+n.text+'</div></div>';
+        }).join('');
+      }
+      html += '</div></div>';
+
+      // Add note form
+      html += '<div class="card"><div class="card-hdr"><div class="card-title">'+(isHCPS?'⚡ Add HCPS Downtime Entry':'Add Clinical Note')+'</div>'
+        +(isHCPS?'<span class="badge bdg-amber">Downtime Entry</span>':'')
+        +'</div><div class="card-body">'
+        + '<select class="form-select" id="note-type"><option>Progress Note</option><option>Nursing Note</option><option>Medication Order</option><option>Observation</option><option>Discharge Summary</option></select>'
+        + '<input class="form-input" id="note-author" placeholder="Clinician name (e.g. Dr. Smith)" style="margin-bottom:10px;">'
+        + '<textarea class="form-textarea'+(isHCPS?' hcps-focus':'')+'" id="note-text" placeholder="'+(isHCPS?'Enter clinical note — this will be marked as a HCPS downtime entry and reconciled when the EMR is restored…':'Enter clinical note…')+'"></textarea>'
+        + '<div class="flex gap-8 mt-12"><button class="btn '+(isHCPS?'btn-amber':'btn-blue')+'" onclick="App.addNote(\''+p.id+'\')">Save Note</button>'
+        + '<button class="btn btn-outline" onclick="document.getElementById(\'note-text\').value=\'\';document.getElementById(\'note-author\').value=\'\';">Clear</button></div>'
+        + '<div id="note-saved" class="hidden" style="color:#16a34a;font-size:13px;margin-top:8px;font-weight:600;">✓ Note saved successfully.</div>'
+        + '</div></div>';
+    }
+
+    document.getElementById('patient-detail-content').innerHTML = html;
+  },
+
+  metaItem(label, val) {
+    return '<div class="meta-item"><label>'+label+'</label><span>'+val+'</span></div>';
+  },
+
+  switchTab(tab) {
+    this.state.tab = tab;
+    this.renderPatient();
+  },
+
+  // ── ADD PATIENT ───────────────────────────────────────
+  renderAddPatient() {
+    this.formAllergies = this.formAllergies || [];
+    this.formMeds = this.formMeds || [];
+    this.refreshAllergyTags();
+    this.refreshMedList();
+  },
+
+  addTag(event, type) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const inp = document.getElementById('allergy-inp');
+      const val = inp.value.trim();
+      if (val) {
+        this.formAllergies.push(val);
+        inp.value = '';
+        this.refreshAllergyTags();
+      }
+    }
+  },
+
+  removeTag(i) {
+    this.formAllergies.splice(i, 1);
+    this.refreshAllergyTags();
+  },
+
+  refreshAllergyTags() {
+    const wrap = document.getElementById('allergy-wrap');
+    if (!wrap) return;
+    const inp = '<input class="inp-tag" id="allergy-inp" placeholder="Type allergy and press Enter…" onkeydown="App.addTag(event,\'allergy\')">';
+    wrap.innerHTML = this.formAllergies.map((a,i) =>
+      '<span class="tag-pill">'+a+'<span class="tag-x" onclick="App.removeTag('+i+')">×</span></span>'
+    ).join('') + inp;
+  },
+
+  addMedToForm() {
+    const name = (document.getElementById('med-name-inp')||{}).value||'';
+    const dose = (document.getElementById('med-dose-inp')||{}).value||'';
+    const freq = (document.getElementById('med-freq-inp')||{}).value||'';
+    if (!name) return;
+    this.formMeds.push({name,dose,freq,route:'Oral'});
+    document.getElementById('med-name-inp').value='';
+    document.getElementById('med-dose-inp').value='';
+    document.getElementById('med-freq-inp').value='';
+    this.refreshMedList();
+  },
+
+  removeMed(i) {
+    this.formMeds.splice(i,1);
+    this.refreshMedList();
+  },
+
+  refreshMedList() {
+    const el = document.getElementById('med-list-add');
+    if (!el) return;
+    if (this.formMeds.length === 0) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div class="med-list-wrap">'
+      + this.formMeds.map((m,i) =>
+        '<div class="med-list-item"><strong>'+m.name+'</strong> &nbsp;'+m.dose+' · '+m.freq+'<button onclick="App.removeMed('+i+')">×</button></div>'
+      ).join('')
+      + '</div>';
+  },
+
+  savePatient() {
+    const name = (document.getElementById('ap-name')||{}).value||'';
+    const dob = (document.getElementById('ap-dob')||{}).value||'';
+    const ward = (document.getElementById('ap-ward')||{}).value||'';
+    const diagnosis = (document.getElementById('ap-diagnosis')||{}).value||'';
+    const errEl = document.getElementById('ap-err');
+    if (!name||!dob||!ward||!diagnosis) {
+      errEl.textContent = 'Please fill in all required fields (marked with *).';
+      errEl.style.display='block'; return;
+    }
+    errEl.style.display='none';
+    const id = 'P'+Date.now();
+    const mrn = (document.getElementById('ap-mrn')||{}).value || 'MRN-'+Math.floor(10000+Math.random()*90000);
+    const patient = {
+      id, mrn, name,
+      dob, gender: document.getElementById('ap-gender').value,
+      ward, bed: document.getElementById('ap-bed').value||'—',
+      admissionDate: new Date().toISOString().split('T')[0],
+      diagnosis,
+      allergies: [...this.formAllergies],
+      medications: [...this.formMeds],
+      labs: [],
+      notes: []
+    };
+    this.patients.push(patient);
+    this.formAllergies = [];
+    this.formMeds = [];
+    this.save();
+    this.navigate('patient', {patientId: id});
+  },
+
+  // ── NOTES ─────────────────────────────────────────────
+  addNote(patientId) {
+    const text = (document.getElementById('note-text')||{}).value||'';
+    const author = (document.getElementById('note-author')||{}).value||'Clinician';
+    const type = (document.getElementById('note-type')||{}).value||'Progress Note';
+    if (!text.trim()) return;
+    const isHCPS = this.state.mode === 'hcps';
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0,16).replace('T',' ');
+    const note = {
+      id: 'N'+Date.now(),
+      date: dateStr,
+      author: author||'Clinician',
+      type,
+      text: text.trim(),
+      source: isHCPS ? 'hcps' : 'emr'
+    };
+    const pt = this.patients.find(p => p.id === patientId);
+    if (!pt) return;
+    pt.notes.push(note);
+    if (isHCPS) {
+      this.downtimeEntries.push({ ...note, patientId, patientName: pt.name });
+    }
+    this.save();
+    document.getElementById('note-text').value = '';
+    document.getElementById('note-author').value = '';
+    const saved = document.getElementById('note-saved');
+    if (saved) { saved.classList.remove('hidden'); setTimeout(()=>saved.classList.add('hidden'),2500); }
+    this.renderPatient();
+  },
+
+  // ── DOWNTIME SIMULATION ───────────────────────────────
+  simulateDowntime() {
+    this.state.page = 'downtime';
+    this.render();
+
+    let pct = 0;
+    const bar = document.getElementById('dt-bar');
+    const status = document.getElementById('dt-status');
+    const msgs = [
+      'Detecting EMR system failure…',
+      'Initiating HCPS backup protocol…',
+      'Loading pre-synced patient database…',
+      'Verifying data integrity…',
+      'HCPS backup ready. Activating…'
+    ];
+    let msgIdx = 0;
+    const interval = setInterval(() => {
+      pct += 2;
+      if (bar) bar.style.width = pct + '%';
+      if (pct % 20 === 0 && msgIdx < msgs.length - 1) {
+        msgIdx++;
+        if (status) status.innerHTML = 'Status: <span>' + msgs[msgIdx] + '</span>';
+      }
+      if (pct >= 100) {
+        clearInterval(interval);
+        setTimeout(() => this.activateHCPS(), 600);
+      }
+    }, 50);
+  },
+
+  activateHCPS() {
+    this.state.mode = 'hcps';
+    this.state.downtimeStart = Date.now();
+    this.state.page = 'dashboard';
+    this.save();
+    this.render();
+  },
+
+  goRestore() {
+    this.navigate('reconciliation');
+  },
+
+  startTimer() {
+    if (this.timerInterval) return;
+    this.timerInterval = setInterval(() => {
+      const el = document.getElementById('downtime-timer');
+      if (!el || !this.state.downtimeStart) return;
+      const secs = Math.floor((Date.now() - this.state.downtimeStart) / 1000);
+      const m = Math.floor(secs/60).toString().padStart(2,'0');
+      const s = (secs%60).toString().padStart(2,'0');
+      el.textContent = m + ':' + s;
+    }, 1000);
+  },
+
+  stopTimer() {
+    if (this.timerInterval) { clearInterval(this.timerInterval); this.timerInterval = null; }
+  },
+
+  // ── RECONCILIATION ────────────────────────────────────
+  renderReconciliation() {
+    const entries = this.downtimeEntries;
+    const duration = this.state.downtimeStart
+      ? Math.floor((Date.now() - this.state.downtimeStart) / 1000)
+      : 0;
+    const m = Math.floor(duration/60), s = duration%60;
+    const durationStr = m+'m '+s+'s';
+
+    let html = '<div class="recon-header">'
+      + '<h2>System Reconciliation</h2>'
+      + '<p>Review all entries made during the HCPS downtime period before syncing to the primary EMR.</p>'
+      + '<div class="recon-stats">'
+      + '<div class="recon-stat"><div class="recon-stat-val">'+entries.length+'</div><div class="recon-stat-lbl">Downtime Entries</div></div>'
+      + '<div class="recon-stat"><div class="recon-stat-val">'+[...new Set(entries.map(e=>e.patientId))].length+'</div><div class="recon-stat-lbl">Patients Affected</div></div>'
+      + '<div class="recon-stat"><div class="recon-stat-val">'+durationStr+'</div><div class="recon-stat-lbl">Downtime Duration</div></div>'
+      + '</div></div>';
+
+    if (entries.length === 0) {
+      html += '<div class="card"><div class="card-body"><div class="empty"><span class="empty-icon">✅</span><p>No entries were made during the downtime period.</p></div></div></div>';
+    } else {
+      html += '<div class="card" style="margin-bottom:16px;"><div class="card-hdr"><div class="card-title">Entries to Reconcile</div><span class="badge bdg-amber">'+entries.length+' pending</span></div>'
+        + '<table class="recon-table"><thead><tr><th>Patient</th><th>Clinician</th><th>Type</th><th>Time</th><th>Note Preview</th></tr></thead><tbody>'
+        + entries.map(e =>
+          '<tr><td><strong>'+e.patientName+'</strong></td><td>'+e.author+'</td><td><span class="badge bdg-blue">'+e.type+'</span></td><td style="white-space:nowrap;font-family:monospace;font-size:12px;">'+e.date+'</td><td style="color:#374151;">'+e.text.substring(0,80)+(e.text.length>80?'…':'')+'</td></tr>'
+        ).join('')
+        + '</tbody></table></div>';
+    }
+
+    html += '<div class="flex gap-8 mt-16">'
+      + '<button class="btn btn-green" onclick="App.completeReconciliation()">✓ Complete Sync — Restore Primary EMR</button>'
+      + '<button class="btn btn-outline" onclick="App.navigate(\'dashboard\')">Back to Dashboard</button>'
+      + '</div>';
+
+    document.getElementById('recon-content').innerHTML = html;
+  },
+
+  completeReconciliation() {
+    // Mark all HCPS notes as reconciled
+    this.patients.forEach(p => {
+      p.notes.forEach(n => { if (n.source === 'hcps') n.source = 'reconciled'; });
+    });
+    this.downtimeEntries = [];
+    this.state.mode = 'normal';
+    this.state.downtimeStart = null;
+    this.stopTimer();
+    this.save();
+
+    // Show success then go to dashboard
+    document.getElementById('recon-content').innerHTML =
+      '<div style="text-align:center;padding:64px 24px;">'
+      + '<div style="width:72px;height:72px;background:#16a34a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">'
+      + '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>'
+      + '<div style="font-size:22px;font-weight:800;color:#0f172a;margin-bottom:8px;">Reconciliation Complete</div>'
+      + '<div style="font-size:14px;color:#64748b;margin-bottom:24px;">All HCPS downtime entries have been synced to the primary EMR.<br>The system is returning to normal operation.</div>'
+      + '<div style="font-size:13px;color:#94a3b8;">Redirecting to dashboard…</div>'
+      + '</div>';
+
+    setTimeout(() => { this.navigate('dashboard'); }, 2500);
+  },
+
+  // ── AUTH ──────────────────────────────────────────────
+  doLogin() {
+    const user = (document.getElementById('login-user')||{}).value||'';
+    const pass = (document.getElementById('login-pass')||{}).value||'';
+    if (user === 'admin' && pass === 'hcps2025') {
+      this.state.loggedIn = true;
+      this.state.page = 'dashboard';
+      this.save();
+      this.render();
+    } else {
+      const err = document.getElementById('login-err');
+      if (err) err.style.display = 'block';
+    }
+  },
+
+  logout() {
+    this.state.loggedIn = false;
+    this.state.page = 'login';
+    this.state.mode = 'normal';
+    this.state.downtimeStart = null;
+    this.downtimeEntries = [];
+    this.stopTimer();
+    this.save();
+    this.render();
+  },
+
+  // ── HELPERS ───────────────────────────────────────────
+  calcAge(dob) {
+    const d = new Date(dob), n = new Date();
+    let age = n.getFullYear() - d.getFullYear();
+    if (n.getMonth() < d.getMonth() || (n.getMonth()===d.getMonth() && n.getDate()<d.getDate())) age--;
+    return age;
+  },
+
+  fmtDate(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'});
+  }
+};
+
+// ── START ──────────────────────────────────────────────────
+window.App = App;
+App.init();
+</script>
+</body>
+</html>
